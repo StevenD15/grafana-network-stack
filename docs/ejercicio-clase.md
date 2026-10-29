@@ -13,14 +13,20 @@ Es el mismo ejercicio para todos — misma métrica, mismo tipo de panel — as�
 ## 1. Requisitos
 
 - **Docker Desktop** instalado y corriendo (Mac/Windows/Linux). Si no lo tenés: https://www.docker.com/products/docker-desktop/
-- El repo del proyecto (te lo compartimos por [zip / link del curso])
+- **Git** instalado (para clonar el repo). Si no lo tenés: https://git-scm.com/downloads
 
 ## 2. Levantar el stack
 
-Abrí una terminal, entrá a la carpeta del proyecto y corré:
+Abrí una terminal y cloná el repo:
 
 ```bash
+git clone https://github.com/StevenD15/grafana-network-stack.git
 cd grafana-network-stack
+```
+
+Levantá el stack:
+
+```bash
 docker compose up -d --build
 ```
 
