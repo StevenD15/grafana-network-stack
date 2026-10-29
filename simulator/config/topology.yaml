@@ -1,0 +1,16 @@
+# Topología declarativa del laboratorio: sedes y sus Access Points.
+# Editar este archivo (y reconstruir el contenedor) es suficiente para
+# agregar/quitar sedes o APs sin tocar código.
+sites:
+  - name: bogota
+    aps:
+      - id: ap-01
+      - id: ap-02
+      - id: ap-03
+  - name: medellin
+    aps:
+      - id: ap-01
+      - id: ap-02
+  - name: cali
+    aps:
+      - id: ap-01

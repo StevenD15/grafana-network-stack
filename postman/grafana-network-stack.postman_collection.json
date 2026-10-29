@@ -1,0 +1,234 @@
+{
+  "info": {
+    "name": "grafana-network-stack",
+    "description": "Todo el laboratorio desde Postman: el simulador (que inventa la red), Prometheus (que le da memoria/historial a esos datos) y los incidentes que se ven reflejados en Grafana (http://localhost:3000) en segundos.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8000" },
+    { "key": "prometheusUrl", "value": "http://localhost:9090" },
+    { "key": "lastScenarioId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Simulador (la fuente de los datos)",
+      "item": [
+        {
+          "name": "Topología (sedes y APs)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/",
+            "description": "Devuelve las sedes y Access Points que existen en el laboratorio. Mostrar primero: '3 sedes, 6 APs, nada de esto es hardware real'."
+          }
+        },
+        {
+          "name": "Catálogo de escenarios",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/scenarios/catalog",
+            "description": "Lista los 7 tipos de incidente disponibles, con su alcance (sede o AP) y una descripción corta de cada uno."
+          }
+        },
+        {
+          "name": "Métricas crudas (/metrics)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/metrics",
+            "description": "El texto plano que el simulador expone en este instante. Importante para entender el punto clave: esto SOLO tiene el valor de AHORA, no guarda historial. Si lo pedís de nuevo en 5 minutos, no sabe qué decía antes. Por eso hace falta Prometheus (ver carpeta 2)."
+          }
+        },
+        {
+          "name": "Escenarios activos ahora",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/scenarios",
+            "description": "Lista los incidentes actualmente activos y su progreso de rampa (0.0 a 1.0). Repetir esta petición después de cada POST para mostrar cómo sube el progreso."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Prometheus (por qué hace falta)",
+      "description": "Estas peticiones no son obligatorias para la demo -lo mismo se termina viendo en Grafana- pero sirven para explicar QUÉ hace Prometheus por detrás: guarda cada lectura del simulador con su hora exacta, y permite hacer cálculos (velocidad de cambio, promedios) que el simulador solo, al no tener memoria, nunca podría responder.",
+      "item": [
+        {
+          "name": "¿Prometheus está sano? (targets)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{prometheusUrl}}/api/v1/targets",
+              "host": ["{{prometheusUrl}}"],
+              "path": ["api", "v1", "targets"]
+            },
+            "description": "Debe devolver 2 'targets' en health=up: 'prometheus' (se monitorea a sí mismo) y 'network-simulator' (nuestro servicio). Si alguno dice down, Prometheus no está pudiendo leer esa fuente."
+          }
+        },
+        {
+          "name": "Pregunta 1: ¿los APs están prendidos AHORA?",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{prometheusUrl}}/api/v1/query?query=network_ap_up",
+              "host": ["{{prometheusUrl}}"],
+              "path": ["api", "v1", "query"],
+              "query": [{ "key": "query", "value": "network_ap_up" }]
+            },
+            "description": "La pregunta más simple posible: 'dame el valor actual'. Esto es casi lo mismo que preguntarle al simulador directamente -no hace falta historial para responderla. Resultado: 1 (prendido) o 0 (apagado) por cada AP."
+          }
+        },
+        {
+          "name": "Pregunta 2: ¿qué tan rápido suben los reintentos?",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{prometheusUrl}}/api/v1/query?query=rate(network_ap_retries_total[5m])",
+              "host": ["{{prometheusUrl}}"],
+              "path": ["api", "v1", "query"],
+              "query": [{ "key": "query", "value": "rate(network_ap_retries_total[5m])" }]
+            },
+            "description": "network_ap_retries_total es un contador que SOLO sube (reintentos acumulados desde que arrancó el simulador) -mirarlo solo no sirve de nada, es un número enorme sin sentido. rate(...) le pide a Prometheus: 'de todo lo que anotaste en los últimos 5 minutos, ¿qué tan rápido está subiendo ESTE INSTANTE?'. Esta pregunta es IMPOSIBLE de responder sin historial: por eso hace falta Prometheus en el medio, el simulador por sí solo no la puede contestar."
+          }
+        },
+        {
+          "name": "Pregunta 3: ¿qué % del tráfico son reintentos?",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{prometheusUrl}}/api/v1/query?query=sum(rate(network_ap_retries_total[5m])) / sum(rate(network_ap_frames_total[5m]))",
+              "host": ["{{prometheusUrl}}"],
+              "path": ["api", "v1", "query"],
+              "query": [
+                { "key": "query", "value": "sum(rate(network_ap_retries_total[5m])) / sum(rate(network_ap_frames_total[5m]))" }
+              ]
+            },
+            "description": "Es la Pregunta 2, pero convertida en porcentaje: 'de todo el trafico, ¿qué fracción tuvo que reintentarse?'. Esto es EXACTAMENTE el número que después dibuja el panel 'Retries ratio por AP' en el dashboard WiFi RF Health -ver esta petición es ver la fórmula detrás del gráfico."
+          }
+        },
+        {
+          "name": "Antes/después: channel utilization de Bogotá",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{prometheusUrl}}/api/v1/query?query=network_ap_channel_utilization_ratio{site=\"bogota\"}",
+              "host": ["{{prometheusUrl}}"],
+              "path": ["api", "v1", "query"],
+              "query": [
+                { "key": "query", "value": "network_ap_channel_utilization_ratio{site=\"bogota\"}" }
+              ]
+            },
+            "description": "Para el truco de 'antes/después': enviar esta petición, anotar los 3 valores (uno por AP de Bogotá), después enviar HIGH_DENSITY (carpeta 3), esperar 30s, y volver a enviar esta misma petición -los valores suben notoriamente. Es la prueba en vivo de que Postman -> simulador -> Prometheus -> Grafana es una sola cadena real."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Incidentes",
+      "item": [
+        {
+          "name": "HIGH_DENSITY — saturación de una sede",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/scenarios",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scenario\": \"high_density\",\n  \"scope\": \"site\",\n  \"target\": \"bogota\",\n  \"duration_s\": 300\n}"
+            },
+            "description": "En palabras simples: de golpe llegan muchos más clientes a conectarse a TODA la sede de Bogotá, como si hubiera un evento o una reunión grande. El canal de radio se satura, suben los reintentos y la latencia, y baja el throughput. Se revierte solo a los 300s.\n\nQué mirar en Grafana: Network Overview (clientes conectados y latencia suben) y WiFi RF Health filtrado a site=bogota (channel utilization y retries suben en los 3 APs de la sede, no solo en uno)."
+          }
+        },
+        {
+          "name": "AP_OVERLOAD — sobrecarga de un solo AP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/scenarios",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scenario\": \"ap_overload\",\n  \"scope\": \"ap\",\n  \"target\": \"bogota/ap-01\",\n  \"duration_s\": 300\n}"
+            },
+            "description": "En palabras simples: es el mismo fenómeno de saturación que HIGH_DENSITY, pero en vez de afectar toda la sede, le pasa a un solo Access Point puntual — como si todo el mundo se conectara al mismo router en vez de repartirse entre varios.\n\nQué mirar en Grafana: WiFi RF Health filtrado a ap=bogota/ap-01 — channel utilization y retries suben SOLO en ese AP; bogota/ap-02 y bogota/ap-03 quedan normales."
+          }
+        },
+        {
+          "name": "RF_INTERFERENCE — interferencia de radio",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/scenarios",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scenario\": \"rf_interference\",\n  \"scope\": \"ap\",\n  \"target\": \"medellin/ap-01\",\n  \"duration_s\": 300\n}"
+            },
+            "description": "En palabras simples: algo empieza a interferir la señal de radio de un AP puntual (un microondas, otro router en el mismo canal, una pared gruesa) — el AP tiene que reintentar enviar los paquetes muchas más veces, pero la señal en sí (RSSI/SNR) no cambia.\n\nQué mirar en Grafana: WiFi RF Health filtrado a ap=medellin/ap-01 — retries y channel utilization suben, pero RSSI y SNR se mantienen iguales (eso es lo que distingue este escenario de poor_signal)."
+          }
+        },
+        {
+          "name": "POOR_SIGNAL — señal débil",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/scenarios",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scenario\": \"poor_signal\",\n  \"scope\": \"ap\",\n  \"target\": \"medellin/ap-02\",\n  \"duration_s\": 300\n}"
+            },
+            "description": "En palabras simples: los clientes de ese AP están lejos o con obstáculos de por medio — como el celular con una sola rayita de señal. Baja el RSSI y el SNR, y eso arrastra más latencia y algo de pérdida de paquetes.\n\nQué mirar en Grafana: WiFi RF Health filtrado a ap=medellin/ap-02 — RSSI y SNR caen notoriamente; Client Experience muestra la latencia de ese AP subiendo."
+          }
+        },
+        {
+          "name": "WAN_DEGRADATION — el problema es Internet, no el WiFi",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/scenarios",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scenario\": \"wan_degradation\",\n  \"scope\": \"site\",\n  \"target\": \"cali\",\n  \"duration_s\": 300\n}"
+            },
+            "description": "En palabras simples: el WiFi de la sede funciona perfecto, pero la conexión a Internet de esa sede (lo que provee el ISP) se puso lenta y empieza a perder paquetes — como cuando el router de tu casa anda bien pero el proveedor de Internet está fallando.\n\nQué mirar en Grafana: Client Experience filtrado a site=cali — 'Latencia del uplink WAN' y 'Packet loss WAN' suben fuerte, pero WiFi RF Health de Cali se ve 100% normal. Es el ejemplo clave para explicar que no todo problema de red es culpa del WiFi."
+          }
+        },
+        {
+          "name": "AUTHENTICATION_FAILURE — fallos de login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/scenarios",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scenario\": \"authentication_failure\",\n  \"scope\": \"site\",\n  \"target\": \"bogota\",\n  \"duration_s\": 300\n}"
+            },
+            "description": "En palabras simples: muchos clientes intentan conectarse a la red y no logran autenticarse (como si el servidor de claves/certificados estuviera fallando). El resto de la red (RF, capacidad) sigue funcionando normal.\n\nQué mirar en Grafana: Client Experience — el panel 'Fallos de autenticación (%)' sube fuerte para site=bogota; todo lo demás queda sin cambios."
+          }
+        },
+        {
+          "name": "AP_DOWN — un AP se apaga",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/scenarios",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scenario\": \"ap_down\",\n  \"scope\": \"ap\",\n  \"target\": \"cali/ap-01\",\n  \"duration_s\": 180\n}"
+            },
+            "description": "En palabras simples: un Access Point se apaga o pierde conexión de gestión por completo — como si lo hubieran desenchufado. Deja de reportar cualquier dato, excepto el indicador de 'está vivo o no', que se pone en rojo. No tiene rampa: es instantáneo, como una falla real de hardware.\n\nQué mirar en Grafana: Network Overview — 'APs Down' pasa a 1 y el panel de disponibilidad muestra a cali/ap-01 en rojo; en WiFi RF Health, ese AP directamente desaparece de los gráficos (no se pone en cero, desaparece)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Detener un incidente",
+      "item": [
+        {
+          "name": "Detener por ID",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/scenarios/{{lastScenarioId}}",
+            "description": "Reemplazar {{lastScenarioId}} por el \"id\" que devolvió el POST correspondiente (o editar la variable de colección 'lastScenarioId'). Inicia la rampa de salida de 30s; si no se detiene manualmente, cada incidente de esta colección ya tiene un duration_s y se revierte solo."
+          }
+        }
+      ]
+    }
+  ]
+}

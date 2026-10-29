@@ -1,0 +1,248 @@
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: network-stack-alerts
+    folder: Network Stack
+    interval: 1m
+    rules:
+      - uid: net-ap-down
+        title: APDown
+        condition: C
+        for: 2m
+        noDataState: NoData
+        execErrState: Error
+        labels:
+          severity: critical
+        annotations:
+          summary: "AP {{ $labels.site }}/{{ $labels.ap_id }} dejó de reportar (up=0)"
+        data:
+          - refId: A
+            datasourceUid: prometheus
+            relativeTimeRange: { from: 300, to: 0 }
+            model:
+              refId: A
+              editorMode: code
+              expr: network_ap_up
+              instant: true
+              range: false
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: lt, params: [1] }
+                  operator: { type: and }
+                  query: { params: [A] }
+                  reducer: { type: last, params: [] }
+                  type: query
+
+      - uid: net-high-channel-utilization
+        title: HighChannelUtilization
+        condition: C
+        for: 5m
+        noDataState: NoData
+        execErrState: Error
+        labels:
+          severity: warning
+        annotations:
+          summary: "Channel utilization alto en {{ $labels.site }}/{{ $labels.ap_id }}"
+        data:
+          - refId: A
+            datasourceUid: prometheus
+            relativeTimeRange: { from: 300, to: 0 }
+            model:
+              refId: A
+              editorMode: code
+              expr: network_ap_channel_utilization_ratio
+              instant: true
+              range: false
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0.85] }
+                  operator: { type: and }
+                  query: { params: [A] }
+                  reducer: { type: last, params: [] }
+                  type: query
+
+      - uid: net-high-retries
+        title: HighRetriesRatio
+        condition: C
+        for: 5m
+        noDataState: NoData
+        execErrState: Error
+        labels:
+          severity: warning
+        annotations:
+          summary: "Retries por encima del 20% en {{ $labels.site }}/{{ $labels.ap_id }}"
+        data:
+          - refId: A
+            datasourceUid: prometheus
+            relativeTimeRange: { from: 600, to: 0 }
+            model:
+              refId: A
+              editorMode: code
+              expr: >-
+                sum by (site, ap_id) (rate(network_ap_retries_total[5m]))
+                / sum by (site, ap_id) (rate(network_ap_frames_total[5m]))
+              instant: true
+              range: false
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0.2] }
+                  operator: { type: and }
+                  query: { params: [A] }
+                  reducer: { type: last, params: [] }
+                  type: query
+
+      - uid: net-high-latency-warning
+        title: HighLatencyP90Warning
+        condition: C
+        for: 5m
+        noDataState: NoData
+        execErrState: Error
+        labels:
+          severity: warning
+        annotations:
+          summary: "Latencia p90 por encima de 100ms en {{ $labels.site }}/{{ $labels.ap_id }}"
+        data:
+          - refId: A
+            datasourceUid: prometheus
+            relativeTimeRange: { from: 600, to: 0 }
+            model:
+              refId: A
+              editorMode: code
+              expr: >-
+                1000 * histogram_quantile(0.9,
+                  sum by (le, site, ap_id) (rate(network_client_latency_seconds_bucket[5m])))
+              instant: true
+              range: false
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [100] }
+                  operator: { type: and }
+                  query: { params: [A] }
+                  reducer: { type: last, params: [] }
+                  type: query
+
+      - uid: net-high-latency-critical
+        title: HighLatencyP90Critical
+        condition: C
+        for: 5m
+        noDataState: NoData
+        execErrState: Error
+        labels:
+          severity: critical
+        annotations:
+          summary: "Latencia p90 por encima de 300ms en {{ $labels.site }}/{{ $labels.ap_id }}"
+        data:
+          - refId: A
+            datasourceUid: prometheus
+            relativeTimeRange: { from: 600, to: 0 }
+            model:
+              refId: A
+              editorMode: code
+              expr: >-
+                1000 * histogram_quantile(0.9,
+                  sum by (le, site, ap_id) (rate(network_client_latency_seconds_bucket[5m])))
+              instant: true
+              range: false
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [300] }
+                  operator: { type: and }
+                  query: { params: [A] }
+                  reducer: { type: last, params: [] }
+                  type: query
+
+      - uid: net-high-packet-loss
+        title: HighPacketLoss
+        condition: C
+        for: 5m
+        noDataState: NoData
+        execErrState: Error
+        labels:
+          severity: warning
+        annotations:
+          summary: "Packet loss WiFi por encima del 5% en {{ $labels.site }}/{{ $labels.ap_id }}"
+        data:
+          - refId: A
+            datasourceUid: prometheus
+            relativeTimeRange: { from: 600, to: 0 }
+            model:
+              refId: A
+              editorMode: code
+              expr: >-
+                100 * sum by (site, ap_id) (rate(network_ap_packets_lost_total[5m]))
+                / sum by (site, ap_id) (rate(network_ap_packets_total[5m]))
+              instant: true
+              range: false
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [5] }
+                  operator: { type: and }
+                  query: { params: [A] }
+                  reducer: { type: last, params: [] }
+                  type: query
+
+      - uid: net-auth-failure-spike
+        title: AuthFailureSpike
+        condition: C
+        for: 5m
+        noDataState: NoData
+        execErrState: Error
+        labels:
+          severity: warning
+        annotations:
+          summary: "Más del 30% de fallos de autenticación en {{ $labels.site }}/{{ $labels.ap_id }}"
+        data:
+          - refId: A
+            datasourceUid: prometheus
+            relativeTimeRange: { from: 600, to: 0 }
+            model:
+              refId: A
+              editorMode: code
+              expr: >-
+                100 * sum by (site, ap_id) (rate(network_auth_attempts_total{result="failure"}[5m]))
+                / sum by (site, ap_id) (rate(network_auth_attempts_total[5m]))
+              instant: true
+              range: false
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [30] }
+                  operator: { type: and }
+                  query: { params: [A] }
+                  reducer: { type: last, params: [] }
+                  type: query
