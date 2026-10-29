@@ -1,83 +1,83 @@
-# Ejercicio: tu primer panel en Grafana
+# Ejercicio: su primer panel en Grafana
 
-Bienvenido/a. Este es un ejercicio corto (15-20 minutos) para que practiques con el mismo stack que viste en la presentación: un simulador de red WiFi + Prometheus + Grafana, todo corriendo local en tu computador.
+Bienvenido/a. Este es un ejercicio corto (15-20 minutos) para practicar con el mismo stack presentado en clase: un simulador de red WiFi + Prometheus + Grafana, ejecutándose de forma local en su computador.
 
-No hace falta que entiendas todo el proyecto a fondo. Seguí los pasos en orden y listo.
+No es necesario comprender el proyecto en profundidad. Basta con seguir los pasos en orden.
 
 ## Objetivo
 
-Vas a agregar **un panel nuevo** al dashboard "Network Overview" que muestre el **throughput total de toda la red** (la suma de los 6 Access Points de las 3 sedes, en un solo número).
+Deberá agregar **un panel nuevo** al dashboard "Network Overview" que muestre el **throughput total de toda la red** (la suma de los 6 Access Points de las 3 sedes, en un solo número).
 
-Es el mismo ejercicio para todos — misma métrica, mismo tipo de panel — así que no hay vuelta incorrecta: si seguís los pasos, llegás al mismo resultado.
+Es el mismo ejercicio para todos — misma métrica, mismo tipo de panel — por lo que no hay margen de error: siguiendo los pasos, se llega al mismo resultado.
 
 ## 1. Requisitos
 
-- **Docker Desktop** instalado y corriendo (Mac/Windows/Linux). Si no lo tenés: https://www.docker.com/products/docker-desktop/
-- El archivo `grafana-network-stack.zip` que te compartimos (descomprimilo donde quieras)
+- **Docker Desktop** instalado y en ejecución (Mac/Windows/Linux). Si no lo tiene instalado: https://www.docker.com/products/docker-desktop/
+- El archivo `grafana-network-stack.zip` compartido (descomprímalo en la ubicación de su preferencia)
 
-> ¿Preferís clonarlo en vez de usar el zip? También está público en GitHub: https://github.com/StevenD15/grafana-network-stack
+> ¿Prefiere clonar el repositorio en lugar de usar el zip? También está disponible públicamente en GitHub: https://github.com/StevenD15/grafana-network-stack
 
 ## 2. Levantar el stack
 
-Abrí una terminal, entrá a la carpeta descomprimida y corré:
+Abra una terminal, ingrese a la carpeta descomprimida y ejecute:
 
 ```bash
 cd grafana-network-stack
 docker compose up -d --build
 ```
 
-Esperá aproximadamente 1 minuto (la primera vez descarga las imágenes de Docker). Verificá que los 3 servicios estén arriba:
+Espere aproximadamente 1 minuto (la primera vez se descargan las imágenes de Docker). Verifique que los 3 servicios estén activos:
 
 ```bash
 docker compose ps
 ```
 
-Deberías ver `simulator`, `prometheus` y `grafana`, los tres en estado `Up`.
+Debería ver `simulator`, `prometheus` y `grafana`, los tres en estado `Up`.
 
-## 3. Entrar a Grafana
+## 3. Ingresar a Grafana
 
-Abrí en el navegador: **http://localhost:3000**
+Abra en el navegador: **http://localhost:3000**
 
 - Usuario: `admin`
 - Contraseña: `admin`
 
-Te va a pedir cambiar la contraseña — podés tocar **"Skip"**, no hace falta para este ejercicio.
+Va a solicitar el cambio de contraseña — puede seleccionar **"Skip"**, no es necesario para este ejercicio.
 
-Andá a **Dashboards → carpeta "Network Stack" → Network Overview**. Deberías ver la red en estado normal: 6 APs arriba, 0 caídos, números moviéndose solos cada 10 segundos.
+Diríjase a **Dashboards → carpeta "Network Stack" → Network Overview**. Debería ver la red en estado normal: 6 APs activos, 0 caídos, números actualizándose cada 10 segundos.
 
-## 4. Tu tarea: agregar el panel
+## 4. Tarea: agregar el panel
 
 | | |
 |---|---|
 | **Dashboard** | Network Overview |
-| **Tipo de panel** | Stat (el mismo tipo que ya usan los paneles "APs Up" / "Clientes conectados" arriba del dashboard) |
+| **Tipo de panel** | Stat (el mismo tipo que ya utilizan los paneles "APs Up" / "Clientes conectados") |
 | **Título del panel** | `Throughput total de la red` |
 | **Query (PromQL)** | `sum(network_ap_throughput_mbps{direction="download"})` |
 | **Unidad** | Mbits/sec |
 
-### Paso a paso en Grafana
+### Procedimiento en Grafana
 
-> Ensayado de punta a punta antes de pasarlo — estos son los nombres de botón exactos en esta versión de Grafana.
+> Verificado paso a paso antes de compartirlo — estos son los nombres de botón exactos en esta versión de Grafana.
 
-1. En el dashboard **Network Overview**, hacé clic en **Edit** (arriba a la derecha).
-2. Hacé clic en **Add** → **Visualization**. Se abre el editor de panel.
-3. Abajo, en la query, el editor arranca en modo **Builder**. Hacé clic en **Code** (al lado de Builder) para pasar a modo texto libre, y pegá exactamente:
+1. En el dashboard **Network Overview**, haga clic en **Edit** (arriba a la derecha).
+2. Haga clic en **Add** → **Visualization**. Se abre el editor de panel.
+3. En la parte inferior, el editor de consultas inicia en modo **Builder**. Haga clic en **Code** (junto a Builder) para pasar a modo texto libre, y pegue exactamente:
    ```
    sum(network_ap_throughput_mbps{direction="download"})
    ```
-4. Arriba a la derecha del todo dice **"Time series"** — hacé clic ahí y elegí **Stat** de la lista (es el mismo tipo que ya usan los paneles "APs Up" / "Clientes conectados").
-5. En **Panel options → Title** (columna derecha), borrá "Panel Title" y escribí: `Throughput total de la red`
-6. Scrolleá hacia abajo en la columna derecha hasta **Standard options → Unit**. Hacé clic en el selector, escribí `Mbits` y elegí la opción **"Data rate / megabits/sec"**.
-7. Arriba a la izquierda, hacé clic en **"← Back to dashboard"** (no hay botón "Apply" en esta versión — este es el que agrega el panel al dashboard).
-8. Arriba a la derecha, hacé clic en **"Save dashboard"**, y en la ventana que aparece, confirmá con el botón **"Save"**.
+4. Arriba a la derecha aparece **"Time series"** — haga clic ahí y seleccione **Stat** de la lista.
+5. En **Panel options → Title** (columna derecha), elimine "Panel Title" y escriba: `Throughput total de la red`
+6. Desplácese hacia abajo en la columna derecha hasta **Standard options → Unit**. Haga clic en el selector, escriba `Mbits` y elija la opción **"Data rate / megabits/sec"**.
+7. Arriba a la izquierda, haga clic en **"← Back to dashboard"** (en esta versión no existe el botón "Apply" — esta es la opción equivalente para incorporar el panel al dashboard).
+8. Arriba a la derecha, haga clic en **"Save dashboard"**, y en la ventana que aparece, confirme con el botón **"Save"**.
 
-## 5. ¿Cómo sé que funcionó?
+## 5. Verificación de resultado
 
-Tu panel nuevo debería mostrar un número (algo entre 300 y 900) que cambia solo cada 10 segundos. Eso confirma que está leyendo datos en vivo del simulador a través de Prometheus.
+El panel nuevo debería mostrar un número (aproximadamente entre 300 y 900) que se actualiza automáticamente cada 10 segundos. Esto confirma que está leyendo datos en vivo del simulador a través de Prometheus.
 
-## 6. Opcional — si te sobra tiempo
+## 6. Opcional — si dispone de tiempo adicional
 
-Podés comprobar que tu panel reacciona a un incidente real, disparando uno desde la terminal:
+Puede comprobar que el panel reacciona ante un incidente real, generando uno desde la terminal:
 
 ```bash
 curl -X POST http://localhost:8000/scenarios \
@@ -85,14 +85,14 @@ curl -X POST http://localhost:8000/scenarios \
   -d '{"scenario":"high_density","scope":"site","target":"bogota","duration_s":120}'
 ```
 
-Esperá unos 30 segundos y mirá tu panel. El número se va a mover — tratá de explicar con tus palabras por qué sube o baja.
+Espere unos 30 segundos y observe el panel. El número va a variar — intente explicar con sus propias palabras por qué sube o baja.
 
 ## 7. Entrega
 
-Sacale una captura de pantalla a tu panel ya guardado dentro del dashboard, y compartila en [canal / medio que indique el profesor].
+Tome una captura de pantalla del panel ya guardado dentro del dashboard, y compártala en [canal / medio indicado por el profesor].
 
-## Si algo no funciona
+## Resolución de problemas
 
-- `docker compose ps` no muestra los 3 servicios en `Up` → corré `docker compose logs` y fijate qué error aparece.
-- Grafana no abre en `localhost:3000` → verificá que Docker Desktop esté corriendo (el ícono de la ballena en la barra de tareas/menú).
-- El panel no muestra ningún número → revisá que copiaste la query exactamente como está arriba, sin espacios de más ni comillas distintas.
+- `docker compose ps` no muestra los 3 servicios en `Up` → ejecute `docker compose logs` y revise el error que aparece.
+- Grafana no abre en `localhost:3000` → verifique que Docker Desktop esté en ejecución (el ícono de la ballena en la barra de tareas/menú).
+- El panel no muestra ningún número → verifique que la query se haya copiado exactamente como se indica arriba, sin espacios adicionales ni comillas distintas.

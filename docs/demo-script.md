@@ -17,7 +17,7 @@ curl -s http://localhost:8000/scenarios   # debe devolver [] -> sin incidentes a
 Dejar listo:
 - **Postman** abierto, con la colección `grafana-network-stack` importada y expandida (ver sus 4 carpetas).
 - **Grafana** (`localhost:3000`, admin/admin) abierto en el dashboard **Network Overview**, variable `site` = "All".
-- Si podés, una segunda ventana/monitor con Grafana, para no estar cambiando de pestaña entre Postman y Grafana todo el tiempo.
+- Si es posible, una segunda ventana/monitor con Grafana, para no estar cambiando de pestaña entre Postman y Grafana todo el tiempo.
 
 ---
 
@@ -147,7 +147,7 @@ Decir: *"Todo esto —el simulador, los 7 escenarios, los 4 dashboards, las 7 re
 
 ### 13. Limpieza (fuera de cámara)
 
-Todos los incidentes de este guion tienen `duration_s` configurado, así que se revierten solos. Si querés cortarlos ya:
+Todos los incidentes de este guion tienen `duration_s` configurado, así que se revierten solos. Si desea cortarlos de inmediato:
 
 ```bash
 curl -s http://localhost:8000/scenarios
