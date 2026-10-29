@@ -129,7 +129,6 @@ grafana-network-stack/
 
 - **[`docs/architecture.md`](docs/architecture.md)** — objetivo funcional, componentes, flujo de datos, decisiones de diseño (por qué esta arquitectura y no otra) y convenciones de métricas.
 - **[`docs/scenarios.md`](docs/scenarios.md)** — catálogo completo de escenarios con sus rangos objetivo, ejemplos de la API de control, y qué esperar ver en cada dashboard durante cada incidente.
-- **[`docs/demo-script.md`](docs/demo-script.md)** — guion paso a paso para una demo en vivo (qué mostrar en Prometheus/API/Grafana, en qué orden, y cómo explicar cada incidente en palabras simples).
 - **[`postman/grafana-network-stack.postman_collection.json`](postman/grafana-network-stack.postman_collection.json)** — colección de Postman lista para importar, con 4 carpetas: simulador, Prometheus (para entender por qué hace falta), incidentes (uno por escenario, cada uno con su explicación en el campo "description"), y cómo detenerlos.
 - **[`docs/ejercicio-clase.md`](docs/ejercicio-clase.md)** — instructivo para compañeros de curso: levantar el stack y agregar un panel nuevo en Grafana (métrica y pasos ya definidos, igual para todos).
 
